@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="http://www.texts.io/">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="bower_components/reveal.js/css/reveal.min.css"/>
+<link rel="stylesheet" href="bower_components/reveal.js/css/theme/solarized.css" id="theme">
+<link rel="stylesheet" href="bower_components/reveal.js/lib/css/zenburn.css">
+<link rel="stylesheet" media="print" href="bower_components/reveal.js/css/print/pdf.css" />
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'bower_components/reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+<!--[if lt IE 9]>
+<script src="bower_components/reveal.js/lib/js/html5shiv.js"></script>
+<![endif]-->
+<script src="bower_components/reveal.js/lib/js/head.min.js"></script>
+<script src="bower_components/reveal.js/js/reveal.js"></script>
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section class="slide"><div><h1>WordPress: The Loop, Templating &amp; Hooks</h1></div></section>
+
+<section class="slide"><div><h2>Topics</h2><ul>
+<li>
+<p>The Loop</p><ul>
+<li>
+<p>Custom Queries</p>
+</li>
+</ul>
+</li><li>
+<p>Template Functions</p>
+</li><li>
+<p>Hooks</p><ul>
+<li>
+<p>Actions</p>
+</li><li>
+<p>Filters</p>
+</li>
+</ul>
+</li>
+</ul></div></section>
+
+<section class="slide"><div><h1>The Loop</h1></div></section>
+
+<section class="slide"><div><h2>What is “The Loop”?</h2><p>The Loop is how WordPress iterates over posts to display them. It’s a few lines of PHP.</p><pre><code>&lt;?php 
+if ( have_posts() ) {
+    while ( have_posts() ) {
+        the_post(); 
+        //
+        // Post Content here
+        //
+    } // end while
+} else {
+    //
+    // No posts found 
+    //
+} // end if
+?&gt;
+</code></pre></div></section>
+
+<section class="slide"><div><h2>An Alternate Syntax</h2><p>PHP includes an alternate syntax for control structures. It’s usually preferable for templating, because it makes broken pieces of PHP easier to follow.</p><pre><code>&lt;?php if ( have_posts() ) : ?&gt;
+    &lt;?php while ( have_posts() ) : 
+        the_post(); ?&gt;
+        &lt;!--
+        // Post Content here
+        --&gt;
+    &lt;?php endwhile; ?&gt;
+&lt;?php else : ?&gt;
+    &lt;!-- Other content --&gt;
+&lt;?php endif; ?&gt;
+</code></pre></div></section>
+
+<section class="slide"><div><h2><code>if ( have_posts() )</code></h2><p>Checks if there was a result from the query. The code inside the <code>if</code> statement will only be executed if there is at least one post to show. Conditional code that will wrap all posts can be used here. E.g. using an unordered list to display posts:</p><pre><code>&lt;?php if ( have_posts() ) : ?&gt;
+    &lt;ul&gt;
+        &lt;?php while ( have_posts() ) : 
+            the_post(); ?&gt;
+            &lt;li&gt;Something&lt;/li&gt;
+        &lt;?php endwhile; ?&gt;
+    &lt;/ul&gt;
+&lt;?php else : ?&gt;
+    &lt;!-- Other content --&gt;
+&lt;?php endif; ?&gt;
+</code></pre></div></section>
+
+<section class="slide"><div><h2><code>while ( have_posts() )</code></h2><p>Begin iterating over all the posts. The code within the <code>while</code> structure will be repeated for every post in the result. This may be only one (single post, page) or may be more.</p><p><strong>Note:</strong> This will turn into an infinite loop and cause lots of problems for you without <code>the_post()</code>.</p></div></section>
+
+<section class="slide"><div><h2><code>the_post()</code></h2><ol>
+<li>
+<p>Sets up the current post to use with the templating functions</p>
+</li><li>
+<p>Increments the internal counter so that the Loop advances</p>
+</li>
+</ol></div></section>
+
+<section class="slide"><div><h2>More about the Loop</h2><p>Rewinding the loop can be done with <code>rewind_posts()</code></p><p>The Loop has <a href="http://codex.wordpress.org/The_Loop">an entire page</a> on the WordPress Codex.</p></div></section>
+
+<section class="slide"><div><h2>Custom Queries</h2><p>To make a custom query, use <code>WP_Query</code> class. (<a href="http://codex.wordpress.org/Class_Reference/WP_Query">Documentation</a>)</p><pre><code>&lt;?php
+$custom_query = new WP_Query( array( // args ) );
+</code></pre><p>The same Loop functions we saw before are now available as instance methods on your <code>WP_Query</code> instance. Use <code>wp_reset_postdata</code> to reset back to the original query.</p><pre><code>&lt;?php 
+if ( $custom_query-&gt;have_posts() ) {
+    while ( $custom_query-&gt;have_posts() ) {
+        $custom_query-&gt;the_post();
+        //
+        // Post content
+        //
+    } // end while
+    wp_reset_postdata();
+} // end if
+</code></pre></div></section>
+
+<section class="slide"><div><h1>Template Functions</h1></div></section>
+
+<section class="slide"><div><h2>About WordPress’s Template Functions</h2><p>Lots of WordPress’s functions may only be used within the Loop. This means they are not available until the data have been set up with <code>the_post()</code>.</p><h3>Naming Conventions</h3><ul>
+<li>
+<p><code>the_{something}</code> - Display/print/echo <em>something</em></p>
+</li><li>
+<p><code>get_{something}</code>, <code>get_the_{something}</code> - Return <em>something</em> (usually as string)</p>
+</li>
+</ul></div></section>
+
+<section class="slide"><div><h2>Function Reference</h2><p>The full listing of WordPress functions is available at <a href="http://codex.wordpress.org/Function_Reference/#Formatting_Functions">the Codex Function Reference</a>.</p></div></section>
+
+<section class="slide"><div><h1>Hooks</h1></div></section>
+
+<section class="slide"><div><h2>What is a Hook?</h2><p>A hook is a way to register a function/method to WordPress that will be executed at some later point. It is the preferred way to “hook” into WordPress to manipulate things.</p><h3>Types of Hooks</h3><ul>
+<li>
+<p>Actions - Execute code at a given point that does something. Does not return a value</p>
+</li><li>
+<p>Filters - Receive, manipulate and return a value</p>
+</li>
+</ul></div></section>
+
+<section class="slide"><div><h2>How to Use Hooks</h2><p>Hooks are registered with the <code>add_action</code> and <code>add_filter</code> functions. These functions require at least two parameters:</p><ol>
+<li>
+<p>The name of the hook, e.g. <code>init</code>, <code>wp_head</code>, or <code>before_get_posts</code></p>
+</li><li>
+<p>A <a href="http://php.net/manual/en/language.types.callable.php">callable</a> reference to the function/method to be executed</p>
+</li>
+</ol><p>You can also provide a priority and the number of arguments that your function/method expects.</p></div></section>
+
+<section class="slide"><div><h2>How to Use Hooks (code)</h2><pre><code>&lt;?php
+function my_init_function() {
+    // Some code here
+}
+add_action('init', 'my_init_function');
+</code></pre><pre><code>&lt;?php
+function pv_email_password_replace( $mail_array ) {
+ 	// Some code here
+	return $mail_array;
+}
+add_filter( 'wp_mail', 'pv_email_password_replace', 0 );
+</code></pre></div></section>
+
+<section class="slide"><div><h2>When/Why to Use Hooks</h2><h3>When</h3><ul>
+<li>
+<p>To change WordPress core functionality</p>
+</li><li>
+<p>Scripts and stylesheets (with <code>wp_enqueue_{script|style}</code>)</p>
+</li><li>
+<p>Start up code</p>
+</li><li>
+<p>To communicate with other plugins</p>
+</li>
+</ul><h3>Why</h3><ul>
+<li>
+<p>Changing WordPress core makes it unmaintainable</p><ul>
+<li>
+<p>Other plugins might not work with your changes</p>
+</li><li>
+<p>Difficult to upgrade</p>
+</li>
+</ul>
+</li><li>
+<p>Make sure that dependencies are loaded</p>
+</li><li>
+<p>Only execute what you need when you need it</p>
+</li>
+</ul></div></section>
+
+</div>
+</div>
+<script>
+// https://github.com/hakimel/reveal.js#configuration
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+            { src: 'bower_components/reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+            { src: 'bower_components/reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'bower_components/reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+            { src: 'bower_components/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlighting(); } },
+            { src: 'bower_components/reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+            { src: 'bower_components/reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+WordPress: The Loop, Templating & Hooks
+=======================================
+
+Topics
+------
+
+-   The Loop
+
+    -   Custom Queries
+
+-   Template Functions
+
+-   Hooks
+
+    -   Actions
+
+    -   Filters
+
+The Loop
+========
+
+What is “The Loop”?
+-------------------
+
+The Loop is how WordPress iterates over posts to display them. It’s a few lines
+of PHP.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php 
+if ( have_posts() ) {
+    while ( have_posts() ) {
+        the_post(); 
+        //
+        // Post Content here
+        //
+    } // end while
+} else {
+    //
+    // No posts found 
+    //
+} // end if
+?>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An Alternate Syntax
+-------------------
+
+PHP includes an alternate syntax for control structures. It’s usually preferable
+for templating, because it makes broken pieces of PHP easier to follow.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php if ( have_posts() ) : ?>
+    <?php while ( have_posts() ) : 
+        the_post(); ?>
+        <!--
+        // Post Content here
+        -->
+    <?php endwhile; ?>
+<?php else : ?>
+    <!-- Other content -->
+<?php endif; ?>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`if ( have_posts() )`
+---------------------
+
+Checks if there was a result from the query. The code inside the `if` statement
+will only be executed if there is at least one post to show. Conditional code
+that will wrap all posts can be used here. E.g. using an unordered list to
+display posts:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php if ( have_posts() ) : ?>
+    <ul>
+        <?php while ( have_posts() ) : 
+            the_post(); ?>
+            <li>Something</li>
+        <?php endwhile; ?>
+    </ul>
+<?php else : ?>
+    <!-- Other content -->
+<?php endif; ?>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`while ( have_posts() )`
+------------------------
+
+Begin iterating over all the posts. The code within the `while` structure will
+be repeated for every post in the result. This may be only one (single post,
+page) or may be more.
+
+**Note:** This will turn into an infinite loop and cause lots of problems for
+you without `the_post()`.
+
+`the_post()`
+------------
+
+1.  Sets up the current post to use with the templating functions
+
+2.  Increments the internal counter so that the Loop advances
+
+More about the Loop
+-------------------
+
+Rewinding the loop can be done with `rewind_posts()`
+
+The Loop has [an entire page][1] on the WordPress Codex.
+
+[1]: <http://codex.wordpress.org/The_Loop>
+
+Custom Queries
+--------------
+
+To make a custom query, use `WP_Query` class. ([Documentation][2])
+
+[2]: <http://codex.wordpress.org/Class_Reference/WP_Query>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php
+$custom_query = new WP_Query( array( // args ) );
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The same Loop functions we saw before are now available as instance methods on
+your `WP_Query` instance. Use `wp_reset_postdata` to reset back to the original
+query.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php 
+if ( $custom_query->have_posts() ) {
+    while ( $custom_query->have_posts() ) {
+        $custom_query->the_post();
+        //
+        // Post content
+        //
+    } // end while
+    wp_reset_postdata();
+} // end if
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Template Functions
+==================
+
+About WordPress’s Template Functions
+------------------------------------
+
+Lots of WordPress’s functions may only be used within the Loop. This means they
+are not available until the data have been set up with `the_post()`.
+
+### Naming Conventions
+
+-   `the_{something}` - Display/print/echo *something*
+
+-   `get_{something}`, `get_the_{something}` - Return *something* (usually as
+    string)
+
+Function Reference
+------------------
+
+The full listing of WordPress functions is available at [the Codex Function
+Reference][3].
+
+[3]: <http://codex.wordpress.org/Function_Reference/#Formatting_Functions>
+
+Hooks
+=====
+
+What is a Hook?
+---------------
+
+A hook is a way to register a function/method to WordPress that will be executed
+at some later point. It is the preferred way to “hook” into WordPress to
+manipulate things.
+
+### Types of Hooks
+
+-   Actions - Execute code at a given point that does something. Does not return
+    a value
+
+-   Filters - Receive, manipulate and return a value
+
+How to Use Hooks
+----------------
+
+Hooks are registered with the `add_action` and `add_filter` functions. These
+functions require at least two parameters:
+
+1.  The name of the hook, e.g. `init`, `wp_head`, or `before_get_posts`
+
+2.  A [callable][4] reference to the function/method to be executed
+
+    [4]: <http://php.net/manual/en/language.types.callable.php>
+
+You can also provide a priority and the number of arguments that your
+function/method expects.
+
+How to Use Hooks (code)
+-----------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php
+function my_init_function() {
+    // Some code here
+}
+add_action('init', 'my_init_function');
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?php
+function pv_email_password_replace( $mail_array ) {
+ 	// Some code here
+	return $mail_array;
+}
+add_filter( 'wp_mail', 'pv_email_password_replace', 0 );
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When/Why to Use Hooks
+---------------------
+
+### When
+
+-   To change WordPress core functionality
+
+-   Scripts and stylesheets (with `wp_enqueue_{script|style}`)
+
+-   Start up code
+
+-   To communicate with other plugins
+
+### Why
+
+-   Changing WordPress core makes it unmaintainable
+
+    -   Other plugins might not work with your changes
+
+    -   Difficult to upgrade
+
+-   Make sure that dependencies are loaded
+
+-   Only execute what you need when you need it
+
+ 
